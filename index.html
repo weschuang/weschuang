@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>報告順序抽籤機</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(-45deg, #ff6b6b, #feca57, #48dbfb, #1dd1a1, #5f27cd, #ff9ff3);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 760px;
+    width: 100%;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 2.6rem;
+    background: linear-gradient(135deg, #ff6b6b, #5f27cd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: #576574;
+    margin-bottom: 30px;
+    font-size: 1rem;
+  }
+
+  .students-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 30px;
+  }
+
+  .student-card {
+    padding: 18px 10px;
+    border-radius: 16px;
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: white;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  }
+
+  .student-card:nth-child(1) { background: linear-gradient(135deg, #ff6b6b, #ee5a6f); }
+  .student-card:nth-child(2) { background: linear-gradient(135deg, #feca57, #ff9f43); }
+  .student-card:nth-child(3) { background: linear-gradient(135deg, #48dbfb, #0abde3); }
+  .student-card:nth-child(4) { background: linear-gradient(135deg, #1dd1a1, #10ac84); }
+  .student-card:nth-child(5) { background: linear-gradient(135deg, #5f27cd, #341f97); }
+  .student-card:nth-child(6) { background: linear-gradient(135deg, #ff9ff3, #f368e0); }
+
+  .student-card.presented {
+    opacity: 0.35;
+    filter: grayscale(70%);
+    transform: scale(0.95);
+  }
+
+  .student-card .badge {
+    display: block;
+    font-size: 0.8rem;
+    margin-top: 6px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    padding: 2px 6px;
+  }
+
+  .announcement {
+    min-height: 140px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
+    border-radius: 16px;
+    padding: 25px;
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 3px dashed #c8d6e5;
+    transition: all 0.4s ease;
+  }
+
+  .announcement.active {
+    background: linear-gradient(135deg, #fceabb 0%, #f8b500 100%);
+    border-color: #ff6b6b;
+    animation: pulse 1.2s ease-in-out;
+  }
+
+  .announcement.finished {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    border-color: #1dd1a1;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+  }
+
+  .picked-name {
+    font-size: 2.8rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #ee5a6f, #5f27cd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+    animation: bounce 0.6s ease;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+
+  .message {
+    font-size: 1.15rem;
+    color: #2f3542;
+    font-weight: 500;
+  }
+
+  .placeholder {
+    font-size: 1.1rem;
+    color: #8395a7;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  button {
+    padding: 16px 36px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  .draw-btn {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+  }
+
+  .draw-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(238, 90, 111, 0.5);
+  }
+
+  .draw-btn:disabled {
+    background: #c8d6e5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .clear-btn {
+    background: linear-gradient(135deg, #5f27cd, #341f97);
+  }
+
+  .clear-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(95, 39, 205, 0.5);
+  }
+
+  button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .order-list {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(72, 219, 251, 0.1);
+    border-radius: 12px;
+    min-height: 40px;
+    color: #2f3542;
+    font-size: 0.95rem;
+  }
+
+  .order-list strong { color: #0abde3; }
+
+  .rolling {
+    animation: rollText 0.08s linear infinite;
+  }
+
+  @keyframes rollText {
+    0% { opacity: 0.4; transform: translateY(-5px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 520px) {
+    .students-grid { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 2rem; }
+    .picked-name { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎤 報告順序抽籤機</h1>
+    <p class="subtitle">Let's see who goes next! ✨</p>
+
+    <div class="students-grid" id="studentsGrid"></div>
+
+    <div class="announcement" id="announcement">
+      <p class="placeholder">👇 按下「抽籤」開始決定報告順序</p>
+    </div>
+
+    <div class="buttons">
+      <button class="draw-btn" id="drawBtn">🎲 抽籤</button>
+      <button class="clear-btn" id="clearBtn">🔄 清除重來</button>
+    </div>
+
+    <div class="order-list" id="orderList">
+      <strong>已報告順序：</strong> <span id="orderText">（尚未開始）</span>
+    </div>
+  </div>
+
+<script>
+  const STUDENTS = ["Wes", "Anne", "Pushy", "Yaote", "Mina", "Nick"];
+  let remaining = [...STUDENTS];
+  let pickedOrder = [];
+
+  const grid = document.getElementById("studentsGrid");
+  const announcement = document.getElementById("announcement");
+  const drawBtn = document.getElementById("drawBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const orderText = document.getElementById("orderText");
+
+  function renderStudents() {
+    grid.innerHTML = "";
+    STUDENTS.forEach(name => {
+      const card = document.createElement("div");
+      card.className = "student-card";
+      const isPresented = pickedOrder.includes(name);
+      if (isPresented) card.classList.add("presented");
+      const index = pickedOrder.indexOf(name);
+      card.innerHTML = name + (isPresented ? `<span class="badge">第 ${index + 1} 位 ✓</span>` : "");
+      grid.appendChild(card);
+    });
+  }
+
+  function updateOrder() {
+    orderText.textContent = pickedOrder.length
+      ? pickedOrder.map((n, i) => `${i + 1}. ${n}`).join("　→　")
+      : "（尚未開始）";
+  }
+
+  function resetAnnouncement() {
+    announcement.className = "announcement";
+    announcement.innerHTML = '<p class="placeholder">👇 按下「抽籤」開始決定報告順序</p>';
+  }
+
+  function showFinished() {
+    announcement.className = "announcement finished";
+    announcement.innerHTML = `
+      <div class="picked-name">🎉 全部完成！</div>
+      <p class="message">所有同學都已經報告完畢，辛苦了！</p>
+    `;
+    drawBtn.disabled = true;
+  }
+
+  function drawOne() {
+    if (remaining.length === 0) return;
+
+    drawBtn.disabled = true;
+    clearBtn.disabled = true;
+    announcement.className = "announcement active";
+    announcement.innerHTML = `
+      <div class="picked-name rolling" id="rollingName">?</div>
+      <p class="message">抽籤中...</p>
+    `;
+
+    const rollingEl = document.getElementById("rollingName");
+    let rollCount = 0;
+    const totalRolls = 20;
+
+    const rollInterval = setInterval(() => {
+      rollingEl.textContent = remaining[Math.floor(Math.random() * remaining.length)];
+      rollCount++;
+      if (rollCount >= totalRolls) {
+        clearInterval(rollInterval);
+        finalizePick();
+      }
+    }, 80);
+
+    function finalizePick() {
+      const idx = Math.floor(Math.random() * remaining.length);
+      const picked = remaining.splice(idx, 1)[0];
+      pickedOrder.push(picked);
+
+      announcement.innerHTML = `
+        <div class="picked-name">🌟 ${picked} 🌟</div>
+        <p class="message">Welcome <strong>${picked}</strong>! Please share your thoughts about the AI.</p>
+      `;
+
+      renderStudents();
+      updateOrder();
+      clearBtn.disabled = false;
+
+      if (remaining.length === 0) {
+        setTimeout(showFinished, 2500);
+      } else {
+        drawBtn.disabled = false;
+      }
+    }
+  }
+
+  function clearAll() {
+    remaining = [...STUDENTS];
+    pickedOrder = [];
+    drawBtn.disabled = false;
+    clearBtn.disabled = false;
+    renderStudents();
+    updateOrder();
+    resetAnnouncement();
+  }
+
+  drawBtn.addEventListener("click", drawOne);
+  clearBtn.addEventListener("click", clearAll);
+
+  renderStudents();
+  updateOrder();
+</script>
+</body>
+</html>
