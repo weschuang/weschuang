@@ -69,13 +69,6 @@
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
   }
 
-  .student-card:nth-child(1) { background: linear-gradient(135deg, #ff6b6b, #ee5a6f); }
-  .student-card:nth-child(2) { background: linear-gradient(135deg, #feca57, #ff9f43); }
-  .student-card:nth-child(3) { background: linear-gradient(135deg, #48dbfb, #0abde3); }
-  .student-card:nth-child(4) { background: linear-gradient(135deg, #1dd1a1, #10ac84); }
-  .student-card:nth-child(5) { background: linear-gradient(135deg, #5f27cd, #341f97); }
-  .student-card:nth-child(6) { background: linear-gradient(135deg, #ff9ff3, #f368e0); }
-
   .student-card.presented {
     opacity: 0.35;
     filter: grayscale(70%);
@@ -157,8 +150,8 @@
   }
 
   button {
-    padding: 16px 36px;
-    font-size: 1.1rem;
+    padding: 16px 32px;
+    font-size: 1.05rem;
     font-weight: bold;
     border: none;
     border-radius: 50px;
@@ -192,6 +185,15 @@
     box-shadow: 0 10px 25px rgba(95, 39, 205, 0.5);
   }
 
+  .input-btn {
+    background: linear-gradient(135deg, #1dd1a1, #10ac84);
+  }
+
+  .input-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(29, 209, 161, 0.5);
+  }
+
   button:active:not(:disabled) {
     transform: translateY(0);
   }
@@ -217,10 +219,133 @@
     100% { opacity: 1; transform: translateY(0); }
   }
 
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 18, 40, 0.65);
+    backdrop-filter: blur(6px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 100;
+    animation: fadeIn 0.25s ease;
+  }
+
+  .modal-overlay.show { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+    animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal h2 {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ff6b6b, #5f27cd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .modal .hint {
+    color: #8395a7;
+    font-size: 0.9rem;
+    margin-bottom: 18px;
+  }
+
+  .modal input[type="password"],
+  .modal textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #c8d6e5;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+
+  .modal input[type="password"]:focus,
+  .modal textarea:focus {
+    outline: none;
+    border-color: #5f27cd;
+  }
+
+  .modal textarea {
+    min-height: 180px;
+    resize: vertical;
+  }
+
+  .modal .error {
+    color: #ee5a6f;
+    font-size: 0.9rem;
+    margin-top: 10px;
+    min-height: 1.2em;
+  }
+
+  .modal .modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .modal-buttons button {
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+
+  .cancel-btn {
+    background: linear-gradient(135deg, #8395a7, #576574);
+  }
+
+  .cancel-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(131, 149, 167, 0.5);
+  }
+
+  .confirm-btn {
+    background: linear-gradient(135deg, #1dd1a1, #10ac84);
+  }
+
+  .confirm-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(29, 209, 161, 0.5);
+  }
+
+  .count-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #48dbfb, #0abde3);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+
   @media (max-width: 520px) {
     .students-grid { grid-template-columns: repeat(2, 1fr); }
     h1 { font-size: 2rem; }
     .picked-name { font-size: 2rem; }
+    .container { padding: 28px 20px; }
   }
 </style>
 </head>
@@ -238,6 +363,7 @@
     <div class="buttons">
       <button class="draw-btn" id="drawBtn">🎲 抽籤</button>
       <button class="clear-btn" id="clearBtn">🔄 清除重來</button>
+      <button class="input-btn" id="inputBtn">📝 輸入報告人員</button>
     </div>
 
     <div class="order-list" id="orderList">
@@ -245,10 +371,68 @@
     </div>
   </div>
 
+  <!-- Password modal -->
+  <div class="modal-overlay" id="passwordModal">
+    <div class="modal">
+      <h2>🔐 請輸入密碼</h2>
+      <p class="hint">需要通過密碼驗證才能修改報告人員名單</p>
+      <input type="password" id="passwordInput" placeholder="請輸入密碼" autocomplete="off" />
+      <div class="error" id="passwordError"></div>
+      <div class="modal-buttons">
+        <button class="cancel-btn" id="pwCancelBtn">取消</button>
+        <button class="confirm-btn" id="pwConfirmBtn">確認</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Names input modal -->
+  <div class="modal-overlay" id="namesModal">
+    <div class="modal">
+      <h2>📝 輸入報告人員</h2>
+      <p class="hint">每位人員用半形逗號「,」分開，例如：<code>Wes, Anne, Pushy</code></p>
+      <textarea id="namesInput" placeholder="Wes, Anne, Pushy, Yaote, Mina, Nick"></textarea>
+      <div class="count-tag" id="countTag">目前 0 人</div>
+      <div class="error" id="namesError"></div>
+      <div class="modal-buttons">
+        <button class="cancel-btn" id="namesCancelBtn">取消</button>
+        <button class="confirm-btn" id="namesConfirmBtn">確認送出</button>
+      </div>
+    </div>
+  </div>
+
 <script>
-  const STUDENTS = ["Wes", "Anne", "Pushy", "Yaote", "Mina", "Nick"];
+  const PASSWORD = "2026weschuang";
+  const DEFAULT_STUDENTS = ["Wes", "Anne", "Pushy", "Yaote", "Mina", "Nick"];
+  const PALETTE = [
+    ["#ff6b6b", "#ee5a6f"],
+    ["#feca57", "#ff9f43"],
+    ["#48dbfb", "#0abde3"],
+    ["#1dd1a1", "#10ac84"],
+    ["#5f27cd", "#341f97"],
+    ["#ff9ff3", "#f368e0"],
+    ["#ff7f50", "#ff6348"],
+    ["#7bed9f", "#2ed573"],
+    ["#70a1ff", "#1e90ff"],
+    ["#eccc68", "#ffa502"],
+    ["#a29bfe", "#6c5ce7"],
+    ["#fd79a8", "#e84393"]
+  ];
+
+  let STUDENTS = loadStudents();
   let remaining = [...STUDENTS];
   let pickedOrder = [];
+
+  function loadStudents() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("presenters") || "null");
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch (e) {}
+    return [...DEFAULT_STUDENTS];
+  }
+
+  function saveStudents() {
+    try { localStorage.setItem("presenters", JSON.stringify(STUDENTS)); } catch (e) {}
+  }
 
   function speak(text) {
     if (!("speechSynthesis" in window)) return;
@@ -274,19 +458,39 @@
   const announcement = document.getElementById("announcement");
   const drawBtn = document.getElementById("drawBtn");
   const clearBtn = document.getElementById("clearBtn");
+  const inputBtn = document.getElementById("inputBtn");
   const orderText = document.getElementById("orderText");
+
+  const passwordModal = document.getElementById("passwordModal");
+  const passwordInput = document.getElementById("passwordInput");
+  const passwordError = document.getElementById("passwordError");
+  const pwCancelBtn = document.getElementById("pwCancelBtn");
+  const pwConfirmBtn = document.getElementById("pwConfirmBtn");
+
+  const namesModal = document.getElementById("namesModal");
+  const namesInput = document.getElementById("namesInput");
+  const namesError = document.getElementById("namesError");
+  const countTag = document.getElementById("countTag");
+  const namesCancelBtn = document.getElementById("namesCancelBtn");
+  const namesConfirmBtn = document.getElementById("namesConfirmBtn");
 
   function renderStudents() {
     grid.innerHTML = "";
-    STUDENTS.forEach(name => {
+    STUDENTS.forEach((name, i) => {
       const card = document.createElement("div");
       card.className = "student-card";
+      const [c1, c2] = PALETTE[i % PALETTE.length];
+      card.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
       const isPresented = pickedOrder.includes(name);
       if (isPresented) card.classList.add("presented");
       const index = pickedOrder.indexOf(name);
-      card.innerHTML = name + (isPresented ? `<span class="badge">第 ${index + 1} 位 ✓</span>` : "");
+      card.innerHTML = escapeHtml(name) + (isPresented ? `<span class="badge">第 ${index + 1} 位 ✓</span>` : "");
       grid.appendChild(card);
     });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
   function updateOrder() {
@@ -339,8 +543,8 @@
       pickedOrder.push(picked);
 
       announcement.innerHTML = `
-        <div class="picked-name">🌟 ${picked} 🌟</div>
-        <p class="message">Welcome <strong>${picked}</strong>! Please share your thoughts about the AI.</p>
+        <div class="picked-name">🌟 ${escapeHtml(picked)} 🌟</div>
+        <p class="message">Welcome <strong>${escapeHtml(picked)}</strong>! Please share your thoughts about the AI.</p>
       `;
 
       speak(`Welcome ${picked}! Please share your thoughts about the AI.`);
@@ -368,8 +572,90 @@
     resetAnnouncement();
   }
 
+  // Modal helpers
+  function openPasswordModal() {
+    passwordInput.value = "";
+    passwordError.textContent = "";
+    passwordModal.classList.add("show");
+    setTimeout(() => passwordInput.focus(), 50);
+  }
+
+  function closePasswordModal() {
+    passwordModal.classList.remove("show");
+  }
+
+  function openNamesModal() {
+    namesInput.value = STUDENTS.join(", ");
+    namesError.textContent = "";
+    updateCountTag();
+    namesModal.classList.add("show");
+    setTimeout(() => namesInput.focus(), 50);
+  }
+
+  function closeNamesModal() {
+    namesModal.classList.remove("show");
+  }
+
+  function parseNames(raw) {
+    return raw.split(",").map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function updateCountTag() {
+    const names = parseNames(namesInput.value);
+    countTag.textContent = `目前 ${names.length} 人`;
+  }
+
+  function submitPassword() {
+    if (passwordInput.value === PASSWORD) {
+      closePasswordModal();
+      openNamesModal();
+    } else {
+      passwordError.textContent = "密碼錯誤，請再試一次";
+      passwordInput.select();
+    }
+  }
+
+  function submitNames() {
+    const names = parseNames(namesInput.value);
+    if (names.length < 2) {
+      namesError.textContent = "至少需要 2 位報告人員";
+      return;
+    }
+    const unique = [...new Set(names)];
+    if (unique.length !== names.length) {
+      namesError.textContent = "有重複的人名，請檢查";
+      return;
+    }
+    STUDENTS = unique;
+    saveStudents();
+    closeNamesModal();
+    clearAll();
+  }
+
+  // Events
   drawBtn.addEventListener("click", drawOne);
   clearBtn.addEventListener("click", clearAll);
+  inputBtn.addEventListener("click", openPasswordModal);
+
+  pwCancelBtn.addEventListener("click", closePasswordModal);
+  pwConfirmBtn.addEventListener("click", submitPassword);
+  passwordInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") submitPassword();
+    if (e.key === "Escape") closePasswordModal();
+  });
+
+  namesCancelBtn.addEventListener("click", closeNamesModal);
+  namesConfirmBtn.addEventListener("click", submitNames);
+  namesInput.addEventListener("input", updateCountTag);
+  namesInput.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeNamesModal();
+  });
+
+  [passwordModal, namesModal].forEach(m => {
+    m.addEventListener("click", e => {
+      if (e.target === m) m.classList.remove("show");
+    });
+  });
 
   renderStudents();
   updateOrder();
