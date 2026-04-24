@@ -271,6 +271,7 @@
   }
 
   .modal input[type="password"],
+  .modal input[type="text"],
   .modal textarea {
     width: 100%;
     padding: 14px 16px;
@@ -282,9 +283,24 @@
   }
 
   .modal input[type="password"]:focus,
+  .modal input[type="text"]:focus,
   .modal textarea:focus {
     outline: none;
     border-color: #5f27cd;
+  }
+
+  .modal .field-label {
+    display: block;
+    text-align: left;
+    font-weight: bold;
+    font-size: 0.95rem;
+    color: #2f3542;
+    margin-top: 14px;
+    margin-bottom: 6px;
+  }
+
+  .modal .field-label:first-of-type {
+    margin-top: 10px;
   }
 
   .modal textarea {
@@ -351,7 +367,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>🎤 報告順序抽籤機</h1>
+    <h1 id="pageTitle">🎤 報告順序抽籤機</h1>
     <p class="subtitle">Let's see who goes next! ✨</p>
 
     <div class="students-grid" id="studentsGrid"></div>
@@ -376,7 +392,7 @@
     <div class="modal">
       <h2>🔐 請輸入密碼</h2>
       <p class="hint">需要通過密碼驗證才能修改報告人員名單</p>
-      <input type="password" id="passwordInput" placeholder="請輸入密碼" autocomplete="off" />
+      <input type="password" id="passwordInput" placeholder="請輸入密碼" autocomplete="off" inputmode="numeric" pattern="[0-9]*" />
       <div class="error" id="passwordError"></div>
       <div class="modal-buttons">
         <button class="cancel-btn" id="pwCancelBtn">取消</button>
@@ -389,6 +405,10 @@
   <div class="modal-overlay" id="namesModal">
     <div class="modal">
       <h2>📝 輸入報告人員</h2>
+      <label class="field-label" for="titleInput">首頁標題</label>
+      <input type="text" id="titleInput" placeholder="報告順序抽籤機" maxlength="40" />
+
+      <label class="field-label" for="namesInput">報告人員名單</label>
       <p class="hint">每位人員用半形逗號「,」分開，例如：<code>Wes, Anne, Pushy</code></p>
       <textarea id="namesInput" placeholder="Wes, Anne, Pushy, Yaote, Mina, Nick"></textarea>
       <div class="count-tag" id="countTag">目前 0 人</div>
@@ -401,7 +421,8 @@
   </div>
 
 <script>
-  const PASSWORD = "2026weschuang";
+  const PASSWORD = "20260501";
+  const DEFAULT_TITLE = "報告順序抽籤機";
   const DEFAULT_STUDENTS = ["Wes", "Anne", "Pushy", "Yaote", "Mina", "Nick"];
   const PALETTE = [
     ["#ff6b6b", "#ee5a6f"],
@@ -419,6 +440,7 @@
   ];
 
   let STUDENTS = loadStudents();
+  let pageTitle = loadTitle();
   let remaining = [...STUDENTS];
   let pickedOrder = [];
 
@@ -432,6 +454,24 @@
 
   function saveStudents() {
     try { localStorage.setItem("presenters", JSON.stringify(STUDENTS)); } catch (e) {}
+  }
+
+  function loadTitle() {
+    try {
+      const saved = localStorage.getItem("pageTitle");
+      if (saved && saved.trim()) return saved;
+    } catch (e) {}
+    return DEFAULT_TITLE;
+  }
+
+  function saveTitle() {
+    try { localStorage.setItem("pageTitle", pageTitle); } catch (e) {}
+  }
+
+  function applyTitle() {
+    const el = document.getElementById("pageTitle");
+    el.textContent = "🎤 " + pageTitle;
+    document.title = pageTitle;
   }
 
   function speak(text) {
@@ -470,6 +510,7 @@
   const namesModal = document.getElementById("namesModal");
   const namesInput = document.getElementById("namesInput");
   const namesError = document.getElementById("namesError");
+  const titleInput = document.getElementById("titleInput");
   const countTag = document.getElementById("countTag");
   const namesCancelBtn = document.getElementById("namesCancelBtn");
   const namesConfirmBtn = document.getElementById("namesConfirmBtn");
@@ -585,11 +626,12 @@
   }
 
   function openNamesModal() {
+    titleInput.value = pageTitle;
     namesInput.value = STUDENTS.join(", ");
     namesError.textContent = "";
     updateCountTag();
     namesModal.classList.add("show");
-    setTimeout(() => namesInput.focus(), 50);
+    setTimeout(() => titleInput.focus(), 50);
   }
 
   function closeNamesModal() {
@@ -626,6 +668,10 @@
       namesError.textContent = "有重複的人名，請檢查";
       return;
     }
+    const newTitle = titleInput.value.trim() || DEFAULT_TITLE;
+    pageTitle = newTitle;
+    saveTitle();
+    applyTitle();
     STUDENTS = unique;
     saveStudents();
     closeNamesModal();
@@ -650,6 +696,10 @@
   namesInput.addEventListener("keydown", e => {
     if (e.key === "Escape") closeNamesModal();
   });
+  titleInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); namesInput.focus(); }
+    if (e.key === "Escape") closeNamesModal();
+  });
 
   [passwordModal, namesModal].forEach(m => {
     m.addEventListener("click", e => {
@@ -657,6 +707,7 @@
     });
   });
 
+  applyTitle();
   renderStudents();
   updateOrder();
 </script>
