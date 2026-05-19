@@ -303,6 +303,47 @@
     margin-top: 10px;
   }
 
+  .modal .roster-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .modal select {
+    flex: 1;
+    padding: 12px 14px;
+    border: 2px solid #c8d6e5;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: white;
+    cursor: pointer;
+  }
+
+  .modal select:focus {
+    outline: none;
+    border-color: #5f27cd;
+  }
+
+  .modal .delete-btn {
+    background: linear-gradient(135deg, #ee5a6f, #c0392b);
+    padding: 0 14px;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(238, 90, 111, 0.3);
+  }
+
+  .modal .delete-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(238, 90, 111, 0.5);
+  }
+
+  .modal .delete-btn:disabled {
+    background: #c8d6e5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
   .modal textarea {
     min-height: 180px;
     resize: vertical;
@@ -405,7 +446,14 @@
   <div class="modal-overlay" id="namesModal">
     <div class="modal">
       <h2>📝 輸入報告人員</h2>
-      <label class="field-label" for="titleInput">首頁標題</label>
+
+      <label class="field-label" for="rosterSelect">切換已儲存的清單</label>
+      <div class="roster-row">
+        <select id="rosterSelect"></select>
+        <button type="button" class="delete-btn" id="deleteRosterBtn" title="刪除目前的清單">🗑</button>
+      </div>
+
+      <label class="field-label" for="titleInput">首頁標題（同時做為儲存的清單名稱）</label>
       <input type="text" id="titleInput" placeholder="西勝AI讀書會-報告順序抽籤" maxlength="40" />
 
       <label class="field-label" for="namesInput">報告人員名單</label>
@@ -439,33 +487,49 @@
     ["#fd79a8", "#e84393"]
   ];
 
-  let STUDENTS = loadStudents();
-  let pageTitle = loadTitle();
+  let rosters = loadRosters();
+  let pageTitle = loadCurrentTitle();
+  if (!rosters[pageTitle]) rosters[pageTitle] = [...DEFAULT_STUDENTS];
+  let STUDENTS = [...rosters[pageTitle]];
   let remaining = [...STUDENTS];
   let pickedOrder = [];
 
-  function loadStudents() {
+  function loadRosters() {
     try {
-      const saved = JSON.parse(localStorage.getItem("presenters") || "null");
-      if (Array.isArray(saved) && saved.length > 0) return saved;
+      const saved = JSON.parse(localStorage.getItem("rosters") || "null");
+      if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
     } catch (e) {}
-    return [...DEFAULT_STUDENTS];
-  }
-
-  function saveStudents() {
-    try { localStorage.setItem("presenters", JSON.stringify(STUDENTS)); } catch (e) {}
-  }
-
-  function loadTitle() {
+    // Migrate from old single-roster format
     try {
-      const saved = localStorage.getItem("pageTitle");
+      const oldNames = JSON.parse(localStorage.getItem("presenters") || "null");
+      const oldTitle = localStorage.getItem("pageTitle");
+      if (Array.isArray(oldNames) && oldNames.length > 0) {
+        const title = (oldTitle && oldTitle.trim()) ? oldTitle : DEFAULT_TITLE;
+        const migrated = { [title]: oldNames };
+        localStorage.setItem("rosters", JSON.stringify(migrated));
+        localStorage.setItem("currentTitle", title);
+        localStorage.removeItem("presenters");
+        localStorage.removeItem("pageTitle");
+        return migrated;
+      }
+    } catch (e) {}
+    return { [DEFAULT_TITLE]: [...DEFAULT_STUDENTS] };
+  }
+
+  function saveRosters() {
+    try { localStorage.setItem("rosters", JSON.stringify(rosters)); } catch (e) {}
+  }
+
+  function loadCurrentTitle() {
+    try {
+      const saved = localStorage.getItem("currentTitle");
       if (saved && saved.trim()) return saved;
     } catch (e) {}
     return DEFAULT_TITLE;
   }
 
-  function saveTitle() {
-    try { localStorage.setItem("pageTitle", pageTitle); } catch (e) {}
+  function saveCurrentTitle() {
+    try { localStorage.setItem("currentTitle", pageTitle); } catch (e) {}
   }
 
   function applyTitle() {
@@ -514,6 +578,8 @@
   const countTag = document.getElementById("countTag");
   const namesCancelBtn = document.getElementById("namesCancelBtn");
   const namesConfirmBtn = document.getElementById("namesConfirmBtn");
+  const rosterSelect = document.getElementById("rosterSelect");
+  const deleteRosterBtn = document.getElementById("deleteRosterBtn");
 
   function renderStudents() {
     grid.innerHTML = "";
@@ -626,12 +692,66 @@
   }
 
   function openNamesModal() {
+    renderRosterSelect(pageTitle);
     titleInput.value = pageTitle;
     namesInput.value = STUDENTS.join(", ");
     namesError.textContent = "";
     updateCountTag();
+    updateDeleteBtnState();
     namesModal.classList.add("show");
     setTimeout(() => titleInput.focus(), 50);
+  }
+
+  function renderRosterSelect(selected) {
+    rosterSelect.innerHTML = "";
+    const titles = Object.keys(rosters);
+    titles.forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = `${t}（${rosters[t].length} 人）`;
+      if (t === selected) opt.selected = true;
+      rosterSelect.appendChild(opt);
+    });
+    const newOpt = document.createElement("option");
+    newOpt.value = "__new__";
+    newOpt.textContent = "── 全新建立 ──";
+    rosterSelect.appendChild(newOpt);
+  }
+
+  function updateDeleteBtnState() {
+    const titles = Object.keys(rosters);
+    deleteRosterBtn.disabled = titles.length <= 1 || rosterSelect.value === "__new__";
+  }
+
+  function onRosterSelectChange() {
+    const v = rosterSelect.value;
+    if (v === "__new__") {
+      titleInput.value = "";
+      namesInput.value = "";
+      titleInput.focus();
+    } else if (rosters[v]) {
+      titleInput.value = v;
+      namesInput.value = rosters[v].join(", ");
+    }
+    namesError.textContent = "";
+    updateCountTag();
+    updateDeleteBtnState();
+  }
+
+  function deleteCurrentRoster() {
+    const v = rosterSelect.value;
+    if (v === "__new__" || !rosters[v]) return;
+    if (Object.keys(rosters).length <= 1) return;
+    if (!confirm(`確定要刪除清單「${v}」？此操作無法復原。`)) return;
+    delete rosters[v];
+    saveRosters();
+    const nextTitle = Object.keys(rosters)[0];
+    renderRosterSelect(nextTitle);
+    titleInput.value = nextTitle;
+    namesInput.value = rosters[nextTitle].join(", ");
+    namesError.textContent = "";
+    updateCountTag();
+    updateDeleteBtnState();
   }
 
   function closeNamesModal() {
@@ -669,11 +789,12 @@
       return;
     }
     const newTitle = titleInput.value.trim() || DEFAULT_TITLE;
+    rosters[newTitle] = unique;
+    saveRosters();
     pageTitle = newTitle;
-    saveTitle();
+    saveCurrentTitle();
     applyTitle();
-    STUDENTS = unique;
-    saveStudents();
+    STUDENTS = [...unique];
     closeNamesModal();
     clearAll();
   }
@@ -700,6 +821,8 @@
     if (e.key === "Enter") { e.preventDefault(); namesInput.focus(); }
     if (e.key === "Escape") closeNamesModal();
   });
+  rosterSelect.addEventListener("change", onRosterSelectChange);
+  deleteRosterBtn.addEventListener("click", deleteCurrentRoster);
 
   [passwordModal, namesModal].forEach(m => {
     m.addEventListener("click", e => {
