@@ -387,6 +387,24 @@
     box-shadow: 0 10px 25px rgba(29, 209, 161, 0.5);
   }
 
+  .export-btn {
+    background: linear-gradient(135deg, #48dbfb, #0abde3);
+  }
+
+  .export-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(72, 219, 251, 0.5);
+  }
+
+  .import-btn {
+    background: linear-gradient(135deg, #feca57, #ff9f43);
+  }
+
+  .import-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(254, 202, 87, 0.5);
+  }
+
   .count-tag {
     display: inline-block;
     background: linear-gradient(135deg, #48dbfb, #0abde3);
@@ -463,8 +481,11 @@
       <div class="error" id="namesError"></div>
       <div class="modal-buttons">
         <button class="cancel-btn" id="namesCancelBtn">取消</button>
+        <button class="export-btn" id="exportBtn">📤 匯出</button>
+        <button class="import-btn" id="importBtn">📥 匯入</button>
         <button class="confirm-btn" id="namesConfirmBtn">確認送出</button>
       </div>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none" />
     </div>
   </div>
 
@@ -580,6 +601,9 @@
   const namesConfirmBtn = document.getElementById("namesConfirmBtn");
   const rosterSelect = document.getElementById("rosterSelect");
   const deleteRosterBtn = document.getElementById("deleteRosterBtn");
+  const exportBtn = document.getElementById("exportBtn");
+  const importBtn = document.getElementById("importBtn");
+  const importFile = document.getElementById("importFile");
 
   function renderStudents() {
     grid.innerHTML = "";
@@ -777,6 +801,92 @@
     }
   }
 
+  function exportRosters() {
+    const payload = {
+      app: "presentation-order-selector",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      currentTitle: pageTitle,
+      rosters
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `presenters-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    namesError.style.color = "#10ac84";
+    namesError.textContent = "✓ 已匯出 JSON 檔";
+    setTimeout(() => { namesError.textContent = ""; namesError.style.color = ""; }, 2500);
+  }
+
+  function onImportFile(e) {
+    const file = e.target.files && e.target.files[0];
+    importFile.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const imported = data && typeof data === "object" && data.rosters;
+        if (!imported || typeof imported !== "object" || Array.isArray(imported)) {
+          throw new Error("檔案內容不正確（找不到 rosters 物件）");
+        }
+        const cleaned = {};
+        let count = 0;
+        for (const [title, members] of Object.entries(imported)) {
+          if (!title || typeof title !== "string") continue;
+          if (!Array.isArray(members)) continue;
+          const names = [...new Set(members.filter(n => typeof n === "string" && n.trim()).map(n => n.trim()))];
+          if (names.length >= 2) { cleaned[title] = names; count++; }
+        }
+        if (count === 0) throw new Error("沒有可匯入的有效清單（每份至少 2 人）");
+
+        const replaceAll = confirm(
+          `準備匯入 ${count} 份清單。\n\n` +
+          `按「確定」= 取代目前所有清單\n` +
+          `按「取消」= 與目前清單合併（同名會被匯入版本覆蓋）`
+        );
+        if (replaceAll) {
+          rosters = cleaned;
+        } else {
+          for (const [t, n] of Object.entries(cleaned)) rosters[t] = n;
+        }
+        const nextTitle = (data.currentTitle && rosters[data.currentTitle]) ? data.currentTitle : Object.keys(rosters)[0];
+        pageTitle = nextTitle;
+        STUDENTS = [...rosters[nextTitle]];
+        saveRosters();
+        saveCurrentTitle();
+        applyTitle();
+        renderRosterSelect(pageTitle);
+        titleInput.value = pageTitle;
+        namesInput.value = STUDENTS.join(", ");
+        updateCountTag();
+        updateDeleteBtnState();
+        clearAll();
+        namesError.style.color = "#10ac84";
+        namesError.textContent = `✓ 已匯入 ${count} 份清單`;
+        setTimeout(() => {
+          namesError.textContent = "";
+          namesError.style.color = "";
+          closeNamesModal();
+        }, 1500);
+      } catch (err) {
+        namesError.style.color = "";
+        namesError.textContent = "匯入失敗：" + err.message;
+      }
+    };
+    reader.onerror = () => {
+      namesError.style.color = "";
+      namesError.textContent = "讀取檔案失敗";
+    };
+    reader.readAsText(file);
+  }
+
   function submitNames() {
     const names = parseNames(namesInput.value);
     if (names.length < 2) {
@@ -823,6 +933,9 @@
   });
   rosterSelect.addEventListener("change", onRosterSelectChange);
   deleteRosterBtn.addEventListener("click", deleteCurrentRoster);
+  exportBtn.addEventListener("click", exportRosters);
+  importBtn.addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", onImportFile);
 
   [passwordModal, namesModal].forEach(m => {
     m.addEventListener("click", e => {
