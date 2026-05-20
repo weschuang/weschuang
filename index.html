@@ -446,20 +446,6 @@
     </div>
   </div>
 
-  <!-- Password modal -->
-  <div class="modal-overlay" id="passwordModal">
-    <div class="modal">
-      <h2>🔐 請輸入密碼</h2>
-      <p class="hint">需要通過密碼驗證才能修改報告人員名單</p>
-      <input type="password" id="passwordInput" placeholder="請輸入密碼" autocomplete="off" inputmode="numeric" pattern="[0-9]*" />
-      <div class="error" id="passwordError"></div>
-      <div class="modal-buttons">
-        <button class="cancel-btn" id="pwCancelBtn">取消</button>
-        <button class="confirm-btn" id="pwConfirmBtn">確認</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Names input modal -->
   <div class="modal-overlay" id="namesModal">
     <div class="modal">
@@ -490,7 +476,6 @@
   </div>
 
 <script>
-  const PASSWORD = "20260501";
   const DEFAULT_TITLE = "西勝AI讀書會-報告順序抽籤";
   const DEFAULT_STUDENTS = ["Anne", "Barry", "Stanley", "Wells", "Zoe", "Grace Chen", "Grace Ke", "Fanny", "Terry", "David", "Rex"];
   const PALETTE = [
@@ -585,12 +570,6 @@
   const clearBtn = document.getElementById("clearBtn");
   const inputBtn = document.getElementById("inputBtn");
   const orderText = document.getElementById("orderText");
-
-  const passwordModal = document.getElementById("passwordModal");
-  const passwordInput = document.getElementById("passwordInput");
-  const passwordError = document.getElementById("passwordError");
-  const pwCancelBtn = document.getElementById("pwCancelBtn");
-  const pwConfirmBtn = document.getElementById("pwConfirmBtn");
 
   const namesModal = document.getElementById("namesModal");
   const namesInput = document.getElementById("namesInput");
@@ -704,17 +683,6 @@
   }
 
   // Modal helpers
-  function openPasswordModal() {
-    passwordInput.value = "";
-    passwordError.textContent = "";
-    passwordModal.classList.add("show");
-    setTimeout(() => passwordInput.focus(), 50);
-  }
-
-  function closePasswordModal() {
-    passwordModal.classList.remove("show");
-  }
-
   function openNamesModal() {
     renderRosterSelect(pageTitle);
     titleInput.value = pageTitle;
@@ -789,16 +757,6 @@
   function updateCountTag() {
     const names = parseNames(namesInput.value);
     countTag.textContent = `目前 ${names.length} 人`;
-  }
-
-  function submitPassword() {
-    if (passwordInput.value === PASSWORD) {
-      closePasswordModal();
-      openNamesModal();
-    } else {
-      passwordError.textContent = "密碼錯誤，請再試一次";
-      passwordInput.select();
-    }
   }
 
   function exportRosters() {
@@ -912,14 +870,7 @@
   // Events
   drawBtn.addEventListener("click", drawOne);
   clearBtn.addEventListener("click", clearAll);
-  inputBtn.addEventListener("click", openPasswordModal);
-
-  pwCancelBtn.addEventListener("click", closePasswordModal);
-  pwConfirmBtn.addEventListener("click", submitPassword);
-  passwordInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") submitPassword();
-    if (e.key === "Escape") closePasswordModal();
-  });
+  inputBtn.addEventListener("click", openNamesModal);
 
   namesCancelBtn.addEventListener("click", closeNamesModal);
   namesConfirmBtn.addEventListener("click", submitNames);
@@ -937,10 +888,8 @@
   importBtn.addEventListener("click", () => importFile.click());
   importFile.addEventListener("change", onImportFile);
 
-  [passwordModal, namesModal].forEach(m => {
-    m.addEventListener("click", e => {
-      if (e.target === m) m.classList.remove("show");
-    });
+  namesModal.addEventListener("click", e => {
+    if (e.target === namesModal) namesModal.classList.remove("show");
   });
 
   applyTitle();
